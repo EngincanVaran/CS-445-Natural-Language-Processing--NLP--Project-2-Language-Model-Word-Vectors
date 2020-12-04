@@ -24,7 +24,7 @@ if __name__ == "__main__":
     
     
     wordcloud_outputfile = "outputs/project2_wordcloud.png"
-    project02.create_WordCloud(Docs,8,wordcloud_outputfile,mode="TFIDF",stopwords=True)
+    project02.create_WordCloud(Docs,800,wordcloud_outputfile,mode="TFIDF",stopwords=True)
     print("WordCloud function worked!")
 
     zips_outputfile = "outputs/project2_zips.png"
@@ -44,15 +44,15 @@ if __name__ == "__main__":
     print(sentence,perplexity)
 
 
-    WE = project02.create_WordVectors(Docs,300,'cbow',5)
+    # WE = project02.create_WordVectors(Docs,300,'cbow',5)
 
-    example_tuple_list =[('fransa','paris'),
-                      ('almanya','berlin'),
-                      ('italya','roma'),
-                      ('ispanya','madrid'),
-                      ('hollanda','amsterdam'),
-                      ('ingiltere','londra'),
-                      ('türkiye','ankara')]
-    example_tuple_test =('rusya','')
+    # example_tuple_list =[('fransa','paris'),
+    #                   ('almanya','berlin'),
+    #                   ('italya','roma'),
+    #                   ('ispanya','madrid'),
+    #                   ('hollanda','amsterdam'),
+    #                   ('ingiltere','londra'),
+    #                   ('türkiye','ankara')]
+    # example_tuple_test =('rusya','')
 
-    project02.use_WordRelationship(WE,example_tuple_list,example_tuple_test)
+    # project02.use_WordRelationship(WE,example_tuple_list,example_tuple_test)
