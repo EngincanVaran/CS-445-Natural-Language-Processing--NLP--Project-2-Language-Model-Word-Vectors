@@ -1,28 +1,34 @@
 import pickle
+import matplotlib.pyplot as plt
 import re
 
-import matplotlib.pyplot as plt
-from nltk import sent_tokenize, word_tokenize
-from nltk.util import ngrams, bigrams, everygrams
-from nltk.corpus import stopwords as stw
-from nltk.lm import MLE, KneserNeyInterpolated, Laplace
-from nltk.lm.preprocessing import padded_everygram_pipeline
-from nltk.tokenize.treebank import TreebankWordDetokenizer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from wordcloud import WordCloud
+from timeit import default_timer as Timer
 
+# NLTK imports
+import nltk
+# nltk.download("stopwords")
+# nltk.download('punkt')
+from nltk.lm import MLE, KneserNeyInterpolated, Laplace
+from nltk.lm.preprocessing import padded_everygram_pipeline
+from nltk import word_tokenize, sent_tokenize
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from nltk.util import pad_sequence, bigrams, ngrams, everygrams
+from nltk.lm.preprocessing import pad_both_ends, flatten
+from nltk.corpus import stopwords as STOPWORDS
+
+def preprocess(docs):
+    result = []
+    for d in docs:
+        a = re.sub(r'[\'’][\w]+ ', " " ,d)
+        result.append(a)
+    return result
 
 def create_WordCloud(docs, dim_size, output_file_path, mode="TF", stopwords=True):
-    stopwordsList = set(stw.words('turkish'))
+    stopWords = set(STOPWORDS.words('turkish'))
+    processed_docs = preprocess(docs)
     if stopwords:
-        if mode == "TF":
-            vectorizer = CountVectorizer(stop_words=stopwordsList)
-        elif mode == "TFIDF":
-            vectorizer = TfidfVectorizer(stop_words=stopwordsList)
-        else:
-            print("Unknown mode.")
-            return
-    else:
         if mode == "TF":
             vectorizer = CountVectorizer(stop_words=None)
         elif mode == "TFIDF":
@@ -30,21 +36,25 @@ def create_WordCloud(docs, dim_size, output_file_path, mode="TF", stopwords=True
         else:
             print("Unknown mode.")
             return
-    
-    global tokenizer, preprocessor, vocabulary
+    else:
+        if mode == "TF":
+            vectorizer = CountVectorizer(stop_words=stopWords)
+        elif mode == "TFIDF":
+            vectorizer = TfidfVectorizer(stop_words=stopWords)
+        else:
+            print("Unknown mode.")
+            return
 
-    vectorizer.fit_transform(docs)
-    vocabulary = vectorizer.get_feature_names()
-    
-    preprocessor = vectorizer.build_preprocessor()
-    tokenizer = vectorizer.build_tokenizer()
-    
-    rawString = ""
-    for i in docs:
-        rawString += i
+    global frequency
+    frequency = {}
+    word_count = vectorizer.fit_transform(processed_docs)
+    word_dic = vectorizer.vocabulary_
 
-    # Türkiye'nin -> Türkiye
-    rawString = re.sub(r'\’[\w]+ ', " " ,rawString)
+    counts = word_count.sum(axis=0)
+
+    for word,index in word_dic.items():
+        frequency[word] = counts[0,index]
+
 
     if stopwords:
         wc = WordCloud(
@@ -52,42 +62,42 @@ def create_WordCloud(docs, dim_size, output_file_path, mode="TF", stopwords=True
             width = dim_size,
             height= dim_size,
             background_color="white",
-            stopwords=stopwordsList,
-            min_font_size=10,
-        ).generate(rawString)
+            # stopwords=stopWords,
+            min_font_size=10)
+        wc.generate_from_frequencies(frequency)
     else:
         wc = WordCloud(
             random_state=1,
             width = dim_size,
             height= dim_size,
             background_color="white",
-            # stopwords=stopwordsList,
-            min_font_size=10,
-        ).generate(rawString)
-    
+            stopwords=stopWords,
+            min_font_size=10)
+        wc.generate_from_frequencies(frequency)
+
     plt.figure(figsize=(10, 10))
     plt.imshow(wc)
     plt.axis("off")
-    # plt.show()
+    # plt.show()
     wc.to_file(output_file_path)
     plt.clf()
 
 def create_ZiphsPlot(docs, output_file_path):
-    rawString = ""
-    for i in range(len(docs)):
-        rawString += preprocessor(docs[i])
-        # rawString += docs[i]
-    
-    for i in range(len(docs)):
-        # rawString += preprocessor(docs[i])
-        rawString += docs[i]
-    frequency = {}
-    tokens = tokenizer(rawString)
-    for token in tokens:
-        if token in frequency.keys():
-            frequency[token] += 1
-        else:
-            frequency[token] = 1
+    global frequency
+
+    if not bool(frequency):
+        tokens = []
+        for d in docs:
+            tokenized_sentences = sent_tokenize(d, language="turkish")
+            for sent in tokenized_sentences:
+                tokens += word_tokenize(sent, language="turkish")
+        
+        frequency = {}
+        for token in tokens:
+            if token in frequency.keys():
+                frequency[token] += 1
+            else:
+                frequency[token] = 1
 
     sortedFrequencies = {k: v for k, v in reversed(sorted(frequency.items(), key=lambda item: item[1]))}
     
@@ -105,24 +115,19 @@ def create_ZiphsPlot(docs, output_file_path):
     plt.xlabel("Rank")
     plt.ylabel("Frequency")
     # plt.show()
-    plt.savefig("outputs/normalized_project2_zips.png")
+    # plt.savefig(output_file_path)
     plt.clf()
 
 def create_HeapsPlot(docs, output_file_path):
-    rawString = ""
-    for i in range(len(docs)):
-        rawString += preprocessor(docs[i])
-    
-    # Türkiye'nin -> Türkiye
-    rawString = re.sub(r'\’[\w]+ ', " " ,rawString)
-    # get rid of mi mı
-    rawString = re.sub(r' m[iı] ', " ", rawString)
-
-    tokens = tokenizer(rawString)
+    tokens = []
+    for d in docs:
+        tokenized_sentences = sent_tokenize(d, language="turkish")
+        for sent in tokenized_sentences:
+            tokens += word_tokenize(sent, language="turkish")
 
     corpus = set()
     length = []
-    index = range(1,len(tokens)+1)
+    index = list(range(1,len(tokens)+1))
     for token in tokens:
         corpus.add(token)
         length.append(len(corpus))
@@ -131,7 +136,7 @@ def create_HeapsPlot(docs, output_file_path):
     plt.xlabel("Term Occurence")
     plt.ylabel("Vocabulary Size")
     plt.savefig(output_file_path)
-    plt.plot(index, index, color="black")
+    # plt.plot(index, [i//8 for i in index], color="black")
     # plt.show()
     plt.clf()
 
@@ -141,10 +146,10 @@ def create_LanguageModel(docs, model_type="MLE", ngram=3):
     tokenized_text = []
     for d in docs:
         text = d
-        text = sent_tokenize(text)
+        text = sent_tokenize(text, language="turkish" )
         for sent in text:
             temp = []
-            for i in word_tokenize(sent):
+            for i in word_tokenize(sent, language="turkish"):
                 temp.append(i.lower())
             tokenized_text.append(temp)
 
@@ -182,12 +187,11 @@ def generate_sentence(model, text):
 
         perp_list.append(model.perplexity(ngrams(content,_ngram)))
         sentence_list.append(detokenize(content))
-        print("Done for ", i)
+        # print("Done for ", i)
 
-    for i,j in zip(sentence_list, perp_list):
-        print(i,j)
-
-    print("\n\n\n")
+    # for i,j in zip(sentence_list, perp_list):
+    #     print(i,j)
+    
     index = perp_list.index(min(perp_list))
     
     return (sentence_list[index], perp_list[index])
