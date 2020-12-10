@@ -269,11 +269,15 @@ def use_WordRelationship(model, tuple_list, tuple_test):
     
     avg = sum(myList) / len(myList)
 
+    pairFlag = True
+
     try:
         if ( bool( tuple_test[0]) ):
+            pairFlag = True
             searchVec = model.wv[ tuple_test[0] ]
             tempList = model.wv.similar_by_vector( searchVec + avg , topn=10)
         elif (bool(tuple_test[1])):
+            pairFlag = False
             searchVec = model.wv[ tuple_test[1] ]
             tempList = model.wv.similar_by_vector( searchVec - avg , topn=10)
         else:
@@ -284,11 +288,18 @@ def use_WordRelationship(model, tuple_list, tuple_test):
         return None
 
     result = []
-    for i in range(len(tempList)):
-        if tempList[i][0] != tuple_test[0]:
-            result.append(tempList[i])
-        if len(result) == 5:
-            break
+    if pairFlag:
+        for i in range(len(tempList)):
+            if tempList[i][0] != tuple_test[0]:
+                result.append(tempList[i])
+            if len(result) == 5:
+                break
+    else:
+        for i in range(len(tempList)):
+            if tempList[i][0] != tuple_test[1]:
+                result.append(tempList[i])
+            if len(result) == 5:
+                break
     
     print(result)
     return result

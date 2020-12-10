@@ -53,6 +53,6 @@ if __name__ == "__main__":
                       ('hollanda','amsterdam'),
                       ('ingiltere','londra'),
                       ('türkiye','ankara')]
-    example_tuple_test =('rusya','')
+    example_tuple_test =('','moskova')
 
     project02.use_WordRelationship(WE,example_tuple_list,example_tuple_test)
